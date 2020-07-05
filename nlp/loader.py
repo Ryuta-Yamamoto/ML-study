@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from typing import NamedTuple
 from typing import List
 from pathlib import Path
 
@@ -6,8 +6,7 @@ from pathlib import Path
 dir_path = Path(__file__).parent / 'data'
 
 
-@dataclass(frozen=True)
-class TranslationDataSet:
+class TranslationDataSet(NamedTuple):
     """翻訳タスクの原文と訳文対"""
     origin: List[str]
     trans: List[str]
