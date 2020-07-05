@@ -7,12 +7,13 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.utils import to_categorical
 
 
+BOS = 'bos'
 EOS = 'eos'
 
 
-def add_eos(sentences: List[str]):
+def add_bos_eos(sentences: List[str]):
     return list(map(
-        lambda s: s + ' ' + EOS,
+        lambda s: BOS + ' ' + s + ' ' + EOS,
         sentences
     ))
 
@@ -29,6 +30,7 @@ class TextParser:
         self.max_len = None
         self.is_fixed_len = is_fixed_len
         self.eos_word = EOS
+        self.bos_word = BOS
 
     def fit(
             self,
@@ -67,6 +69,10 @@ class TextParser:
     @property
     def eos_index(self):
         return self.tokenizer.word_index[self.eos_word]
+
+    @property
+    def bos_index(self):
+        return self.tokenizer.word_index[self.bos_word]
 
 
 @dataclass
@@ -114,10 +120,10 @@ def make_data_set(
         has_eos: bool = False,
 ):
     if not has_eos:
-        train_origin_texts = add_eos(train_origin_texts)
-        test_origin_texts = add_eos(test_origin_texts)
-        train_trans_texts = add_eos(train_trans_texts)
-        test_trans_texts = add_eos(test_trans_texts)
+        train_origin_texts = add_bos_eos(train_origin_texts)
+        test_origin_texts = add_bos_eos(test_origin_texts)
+        train_trans_texts = add_bos_eos(train_trans_texts)
+        test_trans_texts = add_bos_eos(test_trans_texts)
     origin_parser = TextParser(
         num_words=origin_num_words,
         is_fixed_len=is_fixed_len,
