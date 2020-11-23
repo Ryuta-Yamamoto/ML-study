@@ -98,6 +98,9 @@ class LayerwiseVAE(VAEModule):
         shape = (n_sentenses, self.num_gaussian)
         mu = torch.zeros(shape)
         sigma = torch.ones(shape)
+        if getattr(self, "device", None):
+            mu = mu.to(self.device)
+            sigma = sigma.to(self.device)
         return torch.stack([
             layer(torch.normal(mu, sigma)) for layer in self.output_layer
         ])
