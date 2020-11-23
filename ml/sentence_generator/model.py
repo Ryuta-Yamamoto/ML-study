@@ -10,6 +10,7 @@ from torch.nn import (
     LSTM,
     Sequential,
     Parameter,
+    ModuleList,
 )
 from torch.tensor import Tensor
 
@@ -78,9 +79,9 @@ class LayerwiseVAE(VAEModule):
     ) -> None:
         super().__init__()
         self.num_gaussian = num_gaussian
-        self.mu_layer = [Linear(hidden_size, num_gaussian) for _ in range(num_layers)]
-        self.sigma_layer = [Linear(hidden_size, num_gaussian) for _ in range(num_layers)]
-        self.output_layer = [Linear(num_gaussian, hidden_size) for _ in range(num_layers)]
+        self.mu_layer = ModuleList([Linear(hidden_size, num_gaussian) for _ in range(num_layers)])
+        self.sigma_layer = ModuleList([Linear(hidden_size, num_gaussian) for _ in range(num_layers)])
+        self.output_layer = ModuleList([Linear(num_gaussian, hidden_size) for _ in range(num_layers)])
    
     def forward(self, hidden):
         mu = [layer(x) for layer, x in zip(self.mu_layer, hidden)]
