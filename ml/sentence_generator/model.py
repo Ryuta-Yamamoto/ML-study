@@ -65,7 +65,6 @@ class LSTMDecoder(Module):
         tensors = []
         previous = initial_input
         for _ in range(length):
-            print(_, previous.shape, hidden_cell_tuple[0].shape)
             output, hidden_cell_tuple = self.layer(previous, hidden_cell_tuple)
             tensors.append(output)
             previous = output
