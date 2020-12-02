@@ -15,6 +15,9 @@ from torch.nn import (
 from torch.tensor import Tensor
 
 
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
 class VAEModule(Module):
     def generate(self, n_sentenses):
         raise NotImplementedError
@@ -96,10 +99,8 @@ class LayerwiseVAE(VAEModule):
     
     def generate(self, n_sentenses):
         shape = (n_sentenses, self.num_gaussian)
-        mu = torch.zeros(shape)
-        sigma = torch.ones(shape)
-        if getattr(self, "device", None):
-            mu, sigma = mu.to("device"), sigma.to("device")
+        mu = torch.zeros(shape).to(DEVICE)
+        sigma = torch.ones(shape).to(DEVICE)
         return torch.stack([
             layer(torch.normal(mu, sigma)) for layer in self.output_layer
         ])
