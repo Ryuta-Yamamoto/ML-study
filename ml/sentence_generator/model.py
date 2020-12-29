@@ -83,13 +83,13 @@ class LSTMDecoder(Module):
         return torch.cat(tensors, axis=1)
 
 
-class VAE(Module):
+class VAE(VAEModule):
     def __init__(self, hidden_size, num_gaussian):
         super().__init__()
         self.num_gaussian = num_gaussian
         self.mu_input = Linear(hidden_size, num_gaussian)
         self.sigma_input = Linear(hidden_size, num_gaussian)
-        self.output = Linear(hidden_size, num_gaussian)
+        self.output = Linear(num_gaussian, hidden_size)
 
     def forward(self, x):
         mu = self.mu_input(x)
@@ -97,11 +97,12 @@ class VAE(Module):
         rand_tensor = mu + normal_random_like(mu) * torch.exp(sigma)
         return self.output(rand_tensor), (mu, sigma)
 
-    def generate(self, n_sentenses, length):
-        shape = (n_sentenses, length, self.num_gaussian)
+    def generate(self, n_sentenses):
+        shape = (n_sentenses, self.num_gaussian)
         mu = torch.zeros(shape).to(DEVICE)
         sigma = torch.ones(shape).to(DEVICE)
-        return self.output(torch.normal(mu, sigma))
+        rand_tensor = torch.normal(mu, sigma)
+        return self.output(rand_tensor)
 
 
 # %%
@@ -226,7 +227,7 @@ class TranformerVAE(Module):
         return self.decoder(x + self.pos_dec_emb, src_key_padding_mask=mask), mu_sigma
     
     def generate(self, n_sentences, length):
-        x = self.vae.generate(n_sentences, length)
+        x = torch.stack([self.vae.generate(n_sentences) for _ in range(length)], dim=1)
         return self.decoder(x + self.pos_dec_emb[:length])
 
 # %%
