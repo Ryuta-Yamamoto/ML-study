@@ -61,12 +61,13 @@ class LSTMDecoder(Module):
         num_layers,
     ) -> None:
         super().__init__()
-        self.layer = set_lstm_spectral_norm(LSTM(
+        self.layer = LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             batch_first=True,
-        ))
+        )
+        set_lstm_spectral_norm(self.layer)
 
     def forward(self, initial_input, hidden_cell_tuple, length):
         tensors = []
@@ -132,12 +133,13 @@ class LSTMVAE(VAEModule):
         n_gaussian,
     ) -> None:
         super().__init__()
-        self.encorder = set_lstm_spectral_norm(LSTM(
+        self.encoder = LSTM(
             input_size=n_dim,
             hidden_size=n_dim, 
             num_layers=n_layers, 
             batch_first=True
-        ))
+        )
+        set_lstm_spectral_norm(self.encoder)
         self.hidden_vae = LayerwiseVAE(
             hidden_size=n_dim,
             num_layers=n_layers,
@@ -155,7 +157,7 @@ class LSTMVAE(VAEModule):
         self.initial = Parameter(torch.zeros([1, n_dim]))
     
     def forward(self, tensor):
-        _, (h, c) = self.encorder(tensor)
+        _, (h, c) = self.encoder(tensor)
         h, (h_mu, h_sigma) = self.hidden_vae(h)
         c, (c_mu, c_sigma) = self.cell_vae(c)
         initial_tensor = torch.stack([self.initial] * tensor.shape[0])
