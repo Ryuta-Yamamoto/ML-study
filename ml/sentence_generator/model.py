@@ -223,11 +223,11 @@ class TranformerVAE(Module):
         # key_padding_mask
         mask = (x == 0).all(axis=-1)
         x = (x + self.pos_enc_emb).transpose(0, 1)
-        x = self.encoder(x + self.pos_enc_emb, src_key_padding_mask=mask)
+        x = self.encoder(x, src_key_padding_mask=mask)
         x = x.transpose(0, 1)
         x, mu_sigma = self.vae(x)
         x = (x + self.pos_dec_emb).transpose(0, 1)
-        x = self.decoder(src_key_padding_mask=mask)
+        x = self.decoder(x, src_key_padding_mask=mask)
         return x.transpose(0, 1), mu_sigma
     
     def generate(self, n_sentences, length):
