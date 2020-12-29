@@ -220,15 +220,20 @@ class TranformerVAE(Module):
         )
     
     def forward(self, x):
-        # key_paddin_mask
+        # key_padding_mask
         mask = (x == 0).all(axis=-1)
+        x = (x + self.pos_enc_emb).transpose(0, 1)
         x = self.encoder(x + self.pos_enc_emb, src_key_padding_mask=mask)
+        x = x.transpose(0, 1)
         x, mu_sigma = self.vae(x)
-        return self.decoder(x + self.pos_dec_emb, src_key_padding_mask=mask), mu_sigma
+        x = (x + self.pos_dec_emb).transpose(0, 1)
+        x = self.decoder(src_key_padding_mask=mask)
+        return x.transpose(0, 1), mu_sigma
     
     def generate(self, n_sentences, length):
         x = torch.stack([self.vae.generate(n_sentences) for _ in range(length)], dim=1)
-        return self.decoder(x + self.pos_dec_emb[:length])
+        x = (x + self.pos_dec_emb[:length]).transpose(0, 1)
+        return self.decoder(x).transpose(0, 1)
 
 # %%
 class EmbWrapper(Module):
