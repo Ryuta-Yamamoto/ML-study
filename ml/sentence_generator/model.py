@@ -32,6 +32,10 @@ def set_lstm_spectral_norm(lstm: LSTM) -> LSTM:
         spectral_norm(lstm, f'weight_hh_l{n}')
 
 
+def normal_random_like(tensor):
+        return torch.normal(torch.zeros_like(tensor), torch.ones_like(tensor))
+    
+
 class TransformerModule(Module):
     def __init__(
             self, 
@@ -79,7 +83,7 @@ class LSTMDecoder(Module):
         return torch.cat(tensors, axis=1)
 
 
-class VAE(VAEModule):
+class VAE(Module):
     def __init__(self, hidden_size, num_gaussian):
         super().__init__()
         self.num_gaussian = num_gaussian
@@ -88,7 +92,16 @@ class VAE(VAEModule):
         self.output = Linear(hidden_size, num_gaussian)
 
     def forward(self, x):
-        mu = self.mu_input.matmul(x)
+        mu = self.mu_input(x)
+        sigma = self.sigma_input(x)
+        rand_tensor = mu + normal_random_like(mu) * torch.exp(sigma)
+        return self.output(rand_tensor), (mu, sigma)
+
+    def generate(self, n_sentenses, length):
+        shape = (n_sentenses, length, self.num_gaussian)
+        mu = torch.zeros(shape).to(DEVICE)
+        sigma = torch.ones(shape).to(DEVICE)
+        return self.output(torch.normal(mu, sigma))
 
 
 # %%
@@ -178,7 +191,7 @@ class ResidualBlock(Module):
         self.param = Parameter(torch.rand(1))
 
     def forward(self, x, *args, **kwargs):
-        return x * self.param + self.model(x)
+        return x * self.param + self.model(x, *args, **kwargs)
 
 
 class TranformerVAE(Module):
@@ -209,7 +222,12 @@ class TranformerVAE(Module):
         # key_paddin_mask
         mask = (x == 0).all(axis=-1)
         x = self.encoder(x + self.pos_enc_emb, src_key_padding_mask=mask)
-
+        x, mu_sigma = self.vae(x)
+        return self.decoder(x + self.pos_dec_emb, src_key_padding_mask=mask), mu_sigma
+    
+    def generate(self, n_sentences, length):
+        x = self.vae.generate(n_sentences, length)
+        return self.decoder(x + self.pos_dec_emb[:length])
 
 # %%
 class EmbWrapper(Module):
@@ -244,5 +262,15 @@ def make_lstm(
     return EmbWrapper(vae_model, n_words, n_dim)
 
 
+def make_transformer(
+    n_dim,
+    n_layers,
+    n_head,
+    n_gaussian,
+    max_len,
+    n_words,
+):
+    model = TranformerVAE(n_dim, n_layers, n_head, n_gaussian, max_len)
+    return EmbWrapper(model, n_words, n_dim)
 
 # %%
