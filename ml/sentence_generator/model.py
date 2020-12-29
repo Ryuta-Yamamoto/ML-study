@@ -12,6 +12,7 @@ from torch.nn import (
     Parameter,
     ModuleList,
 )
+from torch.nn.utils import spectral_norm
 from torch.tensor import Tensor
 
 
@@ -24,6 +25,11 @@ class VAEModule(Module):
 
 
 # %%
+def set_lstm_spectral_norm(lstm: LSTM) -> LSTM:
+    for n in range(lstm.num_layers()):
+        spectral_norm(lstm, f'weight_ih_l{n}')
+        spectral_norm(lstm, f'weight_hh_l{n}')
+
 
 class TransformerModule(Module):
     def __init__(
@@ -54,12 +60,12 @@ class LSTMDecoder(Module):
         num_layers,
     ) -> None:
         super().__init__()
-        self.layer = LSTM(
+        self.layer = set_lstm_spectral_norm(LSTM(
             input_size=hidden_size,
             hidden_size=hidden_size,
             num_layers=num_layers,
             batch_first=True,
-        )
+        ))
 
     def forward(self, initial_input, hidden_cell_tuple, length):
         tensors = []
@@ -113,12 +119,12 @@ class LSTMVAE(VAEModule):
         n_gaussian,
     ) -> None:
         super().__init__()
-        self.encorder = LSTM(
+        self.encorder = set_lstm_spectral_norm(LSTM(
             input_size=n_dim,
             hidden_size=n_dim, 
             num_layers=n_layers, 
             batch_first=True
-        )
+        ))
         self.hidden_vae = LayerwiseVAE(
             hidden_size=n_dim,
             num_layers=n_layers,
