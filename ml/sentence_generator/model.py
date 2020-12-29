@@ -1,5 +1,6 @@
 # %%
 import torch
+from torch import random
 from torch.nn import (
     Module,
     TransformerEncoderLayer,
@@ -77,6 +78,18 @@ class LSTMDecoder(Module):
         return torch.cat(tensors, axis=1)
 
 
+class VAE(VAEModule):
+    def __init__(self, hidden_size, num_gaussian):
+        super().__init__()
+        self.num_gaussian = num_gaussian
+        self.mu_input = Linear(hidden_size, num_gaussian)
+        self.sigma_input = Linear(hidden_size, num_gaussian)
+        self.output = Linear(hidden_size, num_gaussian)
+
+    def forward(self, x):
+        mu = self.mu_input.matmul(x)
+
+
 # %%
 class LayerwiseVAE(VAEModule):
     def __init__(
@@ -94,7 +107,7 @@ class LayerwiseVAE(VAEModule):
     def forward(self, hidden):
         mu = [layer(x) for layer, x in zip(self.mu_layer, hidden)]
         sigma = [layer(x) for layer, x in zip(self.sigma_layer, hidden)]
-        random = [mu + self.normal_random_like(mu) * sigma for mu, sigma in zip(mu, sigma)]
+        random = [mu + self.normal_random_like(mu) * torch.exp(sigma) for mu, sigma in zip(mu, sigma)]
         output = [layer(x) for layer, x in zip(self.output_layer, random)]
         return torch.stack(output), (torch.stack(mu), torch.stack(sigma))
 
@@ -153,7 +166,48 @@ class LSTMVAE(VAEModule):
         h = self.hidden_vae.generate(n_sentenses)
         c = self.cell_vae.generate(n_sentenses)
         initial_tensor = torch.stack([self.initial] * n_sentenses)
-        return self.decoder(initial_tensor, (h, c), length) 
+        return self.decoder(initial_tensor, (h, c), length)
+
+
+class ResidualBlock(Module):
+    def __init__(self, model: Module):
+        super().__init__()
+        self.model = model
+        self.param = Parameter(torch.rand(1))
+
+    def forward(self, x, *args, **kwargs):
+        return x * self.param + self.model(x)
+
+
+class TranformerVAE(Module):
+    def __init__(
+        self,
+        n_dim: int,
+        n_layers: int,
+        n_head: int,
+        n_gaussian: int,
+        max_len: int,
+    ):
+        super().__init__()
+        self.pos_enc_emb = Parameter(torch.rand((max_len, n_dim)))
+        self.pos_dec_emb = Parameter(torch.rand((max_len, n_dim)))
+        self.n_dim = n_dim
+        self.max_len = max_len
+        self.encoder = TransformerEncoder(
+            ResidualBlock(TransformerEncoderLayer(n_dim, n_head)),
+            num_layers=n_layers
+        )
+        self.vae = VAE(n_dim, n_gaussian)
+        self.decoder = TransformerEncoder(
+            ResidualBlock(TransformerEncoderLayer(n_dim, n_head)),
+            num_layers=n_layers
+        )
+    
+    def forward(self, x):
+        # key_paddin_mask
+        mask = (x == 0).all(axis=-1)
+        x = self.encoder(x + self.pos_enc_emb, src_key_padding_mask=mask)
+
 
 # %%
 class EmbWrapper(Module):
