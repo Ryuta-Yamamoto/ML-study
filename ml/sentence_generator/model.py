@@ -27,7 +27,7 @@ class VAEModule(Module):
 
 # %%
 def set_lstm_spectral_norm(lstm: LSTM) -> LSTM:
-    for n in range(lstm.num_layers()):
+    for n in range(lstm.num_layers):
         spectral_norm(lstm, f'weight_ih_l{n}')
         spectral_norm(lstm, f'weight_hh_l{n}')
 
