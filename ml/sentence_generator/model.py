@@ -1,4 +1,3 @@
-# %%
 import torch
 from torch import random
 from torch.nn import (
@@ -25,7 +24,6 @@ class VAEModule(Module):
         raise NotImplementedError
 
 
-# %%
 def set_lstm_spectral_norm(lstm: LSTM) -> LSTM:
     for n in range(lstm.num_layers):
         spectral_norm(lstm, f'weight_ih_l{n}')
@@ -54,10 +52,6 @@ class TransformerModule(Module):
         return self.enc(x_t).transpose(1, 0)
 
 
-# %%
-lstm = LSTM(input_size=1, hidden_size=2, num_layers=3)
-
-# %%
 class LSTMDecoder(Module):
     def __init__(
         self,
@@ -105,7 +99,6 @@ class VAE(VAEModule):
         return self.output(rand_tensor)
 
 
-# %%
 class LayerwiseVAE(VAEModule):
     def __init__(
         self,
@@ -138,7 +131,7 @@ class LayerwiseVAE(VAEModule):
             layer(torch.normal(mu, sigma)) for layer in self.output_layer
         ])
 
-# %%
+
 class LSTMVAE(VAEModule):
     def __init__(
         self,
@@ -235,7 +228,7 @@ class TranformerVAE(Module):
         x = (x + self.pos_dec_emb[:length]).transpose(0, 1)
         return self.decoder(x).transpose(0, 1)
 
-# %%
+
 class EmbWrapper(Module):
     def __init__(
         self,
@@ -278,5 +271,3 @@ def make_transformer(
 ):
     model = TranformerVAE(n_dim, n_layers, n_head, n_gaussian, max_len)
     return EmbWrapper(model, n_words, n_dim)
-
-# %%
